@@ -34,3 +34,5 @@ function TranslucentLocations() {
     };
     return me;
 }
+
+module.exports = TranslucentLocations;

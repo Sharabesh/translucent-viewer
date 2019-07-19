@@ -252,3 +252,4 @@ function TranslucentCluster() {
     };
     return me;
 }
+module.exports = TranslucentCluster;
