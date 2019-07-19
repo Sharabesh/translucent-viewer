@@ -14,7 +14,6 @@ class TranslucentCluster {
             this.tr = new Translucent();
             await this.tr.init(pars);
             this.configureCubeEdges();
-//            await this.createTestData('http://localhost/translucent-viewer/demo-data/1.average-phir.nii.gz');
         };
 
         tr = null; // translucent brain

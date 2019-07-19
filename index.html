@@ -80,7 +80,7 @@ function toggleBrain() {
 
 function handleFileSelect(evt) {
     var file = evt.target.files[0];
-    var m = MRI();
+    var m = new MRI();
 
     m.init()
     .then(() => {return m.loadMRIFromFile(file)})
