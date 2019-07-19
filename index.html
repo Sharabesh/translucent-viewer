@@ -11,6 +11,11 @@
     height:640px;
 }
 </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js"></script>
+    <!--<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/106/three.min.js"></script>-->
+    <!--<script src="https://cdn.jsdelivr.net/npm/three-subdivision-modifier@1.0.5/index.min.js"></script>-->
+    <!--<script src="https://cdn.jsdelivr.net/npm/three-trackballcontrols@0.0.8/index.min.js"></script>-->
+
 </head>
 
 <body>
@@ -38,8 +43,21 @@
 </div>
 <div id='container' width='640px' height='640px'></div>
 
-<script src='translucent-cluster.js'></script>
-<script>
+<script src="bundle.js">
+const TranslucentCluster = require('TranslucentCluster');
+const MRI = require('MRI');
+const $ = require('jquery');
+const Translucent =  require('./translucent.js');
+const THREE = require('three');
+THREE.SubdivisionModifier = require('three-subdivision-modifier');
+THREE.TrackballControls = require('three-trackballcontrols');
+THREE.PLYLoader = require('three-ply-loader');
+const Struct = require('struct');
+const pako = require('pako');
+
+
+
+const translucentCluster = new TranslucentCluster();
 translucentCluster.init({
     elemId: 'container'
 }).then(() => {
@@ -62,7 +80,7 @@ function toggleBrain() {
 
 function handleFileSelect(evt) {
     var file = evt.target.files[0];
-    var m=new MRI();
+    var m = MRI();
 
     m.init()
     .then(() => {return m.loadMRIFromFile(file)})
@@ -88,7 +106,7 @@ function updateStats() {
       translucentCluster.cmap.dims[0] + 'x'
       + translucentCluster.cmap.dims[1] + 'x'
       + translucentCluster.cmap.dims[2]
-    )
+    );
     $('#vertcount').text(translucentCluster.cluster.vertices.length);
     $('#facecount').text(translucentCluster.cluster.faces.length);
 }

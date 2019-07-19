@@ -1,0 +1,39 @@
+{
+  "name": "translucent-viewer",
+  "version": "1.0.0",
+  "description": "A Widgetized Translucent Viewer",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Sharabesh/translucent-viewer.git"
+  },
+  "keywords": [
+    "MRI",
+    "Translucent",
+    "Viewer",
+    "Brain",
+    "Imaging"
+  ],
+  "author": "Roberto Toro, Sharabesh Ramesh",
+  "license": "MIT ",
+  "bugs": {
+    "url": "https://github.com/Sharabesh/translucent-viewer/issues"
+  },
+  "homepage": "https://github.com/Sharabesh/translucent-viewer#readme",
+  "dependencies": {
+    "browser-resolve": "^1.11.3",
+    "jquery": "^3.4.1",
+    "pako": "^1.0.10",
+    "struct": "0.0.12",
+    "three": "^0.106.2",
+    "three-ply-loader": "^1.0.0",
+    "three-subdivision-modifier": "^1.0.5",
+    "three-trackballcontrols": "0.0.8"
+  },
+  "devDependencies": {
+    "esmify": "^2.1.1"
+  }
+}

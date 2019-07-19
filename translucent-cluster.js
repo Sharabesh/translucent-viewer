@@ -1,55 +1,82 @@
-'use strict';
+const Translucent =  require('./translucent.js');
+const MRI = require("./mri.js");
 
-function TranslucentCluster() {
-    var me = {
-        tr: null, // translucent brain
-        cmap: {
+const THREE = require('three');
+THREE.SubdivisionModifier = require('three-subdivision-modifier');
+THREE.TrackballControls = require('three-trackballcontrols');
+THREE.PLYLoader = require('three-ply-loader');
+
+class TranslucentCluster {
+
+        // init the scene
+        init = async (pars) => {
+            var { elemId } = pars;
+            this.tr = new Translucent();
+            await this.tr.init(pars);
+            this.configureCubeEdges();
+//            await this.createTestData('http://localhost/translucent-viewer/demo-data/1.average-phir.nii.gz');
+        };
+
+        tr = null; // translucent brain
+
+        cmap = {
             dims: []
-        },
-        flagDataLoaded: null,
-        createEmptyData: async function createEmptyData(dim) {
+        };
+
+        flagDataLoaded = null;
+
+        createEmptyData = async (dim) => {
             const data = new Float32Array(dim[0]*dim[1]*dim[2]);
             let i;
             for(i=0;i<dim[0]*dim[1]*dim[2];i++) {
                 data[i] = 0;
             }
-            me.cmap={data:data, dims:dim, level:0.1};
-            me.updateMesh(me.cmap);
-            me.flagDataLoaded=true;
-        },
-        createTestData: async function createTestData(path) {
-            var m = new MRI();
+            this.cmap={data:data, dims:dim, level:0.1};
+            this.updateMesh(this.cmap);
+            this.flagDataLoaded=true;
+        };
+
+        createTestData = async (path) => {
+            var m = MRI();
             await m.init();
             await m.loadMRIFromPath(path);
-            me.cmap={data:m.data, dims:m.dim, level:0.06};
-            me.updateMesh(me.cmap);
-            me.flagDataLoaded=true;
-        },
-        cube_edges: new Int32Array(24),
-        edge_table: new Int32Array(256),
-        configureCubeEdges: function configureCubeEdges() {
+            this.cmap={data:m.data, dims:m.dim, level:0.06};
+            this.updateMesh(this.cmap);
+            this.flagDataLoaded=true;
+        };
+
+
+        cube_edges = new Int32Array(24);
+
+
+        edge_table = new Int32Array(256);
+
+        configureCubeEdges = () => {
             var k = 0;
             for(var i=0; i<8; ++i) {
                 for(var j=1; j<=4; j<<=1) {
                     var p = i^j;
                     if(i <= p) {
-                        me.cube_edges[k++] = i;
-                        me.cube_edges[k++] = p;
+                        this.cube_edges[k++] = i;
+                        this.cube_edges[k++] = p;
                     }
                 }
             }
             for(var i=0; i<256; ++i) {
                 var em = 0;
                 for(var j=0; j<24; j+=2) {
-                    var a = !!(i & (1<<me.cube_edges[j]));
-                    var b = !!(i & (1<<me.cube_edges[j+1]));
+                    var a = !!(i & (1<<this.cube_edges[j]));
+                    var b = !!(i & (1<<this.cube_edges[j+1]));
                     em |= a !== b ? (1 << (j >> 1)) : 0;
                 }
-                me.edge_table[i] = em;
+                this.edge_table[i] = em;
             }
-        },
-        buffer: new Int32Array(4096),
-        SurfaceNets: function SurfaceNets(data, dims, level) { 
+        };
+
+        buffer = new Int32Array(4096);
+
+
+        SurfaceNets = (data, dims, level) => {
             var vertices = [];
             var faces = [];
             var n = 0;
@@ -58,8 +85,8 @@ function TranslucentCluster() {
             var grid = new Float32Array(8);
             var buf_no = 1;
 
-            if(R[2] * 2 > me.buffer.length)
-                me.buffer = new Int32Array(R[2] * 2);
+            if(R[2] * 2 > this.buffer.length)
+                this.buffer = new Int32Array(R[2] * 2);
 
             for(x[2]=0; x[2]<dims[2]-1; ++x[2], n+=dims[0], buf_no ^= 1, R[2]=-R[2])
             {
@@ -78,15 +105,15 @@ function TranslucentCluster() {
                     }
                     if(mask === 0 || mask === 0xff)
                         continue;
-                    var edge_mask = me.edge_table[mask];
+                    var edge_mask = this.edge_table[mask];
                     var v = [0.0,0.0,0.0];
                     var e_count = 0;
                     for(var i=0; i<12; ++i) {
                         if(!(edge_mask & (1<<i)))
                             continue;
                         ++e_count;
-                        var e0 = me.cube_edges[ i<<1 ]; // Unpack vertices
-                        var e1 = me.cube_edges[(i<<1)+1];
+                        var e0 = this.cube_edges[ i<<1 ]; // Unpack vertices
+                        var e1 = this.cube_edges[(i<<1)+1];
                         var g0 = grid[e0]; // Unpack grid values
                         var g1 = grid[e1];
                         var t  = g0 - g1; // Compute point of intersection
@@ -106,7 +133,7 @@ function TranslucentCluster() {
                     var s = 1.0 / e_count;
                     for(var i=0; i<3; ++i)
                         v[i] = x[i] + s * v[i];
-                    me.buffer[m] = vertices.length;
+                    this.buffer[m] = vertices.length;
                     vertices.push(v);
                     for(var i=0; i<3; ++i) {
                         if(!(edge_mask & (1<<i)) )
@@ -118,55 +145,59 @@ function TranslucentCluster() {
                         var du = R[iu];
                         var dv = R[iv];
                         if(mask & 1) {
-                            faces.push([me.buffer[m], me.buffer[m-du-dv], me.buffer[m-du]]);
-                            faces.push([me.buffer[m], me.buffer[m-dv], me.buffer[m-du-dv]]);
+                            faces.push([this.buffer[m], this.buffer[m-du-dv], this.buffer[m-du]]);
+                            faces.push([this.buffer[m], this.buffer[m-dv], this.buffer[m-du-dv]]);
                         }
                         else {
-                            faces.push([me.buffer[m], me.buffer[m-du-dv], me.buffer[m-dv]]);
-                            faces.push([me.buffer[m], me.buffer[m-du], me.buffer[m-du-dv]]);
+                            faces.push([this.buffer[m], this.buffer[m-du-dv], this.buffer[m-dv]]);
+                            faces.push([this.buffer[m], this.buffer[m-du], this.buffer[m-du-dv]]);
                         }
                     }
                 }
             }
             return {
-                vertices: vertices,
-                faces: faces
+                vertices,
+                faces
             };
-        },
-        cluster:{
+        };
+
+        cluster = {
             vertices: [],
             faces: []
-        },
-        surfacemesh:null,
-        updateMesh: async function updateMesh(field) {
-            if(typeof me.surfacemesh !== 'undefined') {
-                me.tr.scene.remove( me.surfacemesh );
+        };
+
+        surfacemesh = null;
+
+
+        updateMesh = async (field)  => {
+            if(typeof this.surfacemesh !== 'undefined') {
+                this.tr.scene.remove( this.surfacemesh );
             }
 
-            me.cmap = field;
+            this.cmap = field;
 
             //Create surface mesh
-            me.cluster = new THREE.Geometry();
+            this.cluster = new THREE.Geometry();
 
             var start = (new Date()).getTime();
-            var result = me.SurfaceNets(field.data,field.dims,field.level);
+            var result = this.SurfaceNets(field.data,field.dims,field.level);
             var end = (new Date()).getTime();
 
-            me.cluster.vertices.length = 0;
-            me.cluster.faces.length = 0;
+            this.cluster.vertices.length = 0;
+            this.cluster.faces.length = 0;
 
             for(var i=0; i<result.vertices.length; ++i) {
                 var v = result.vertices[i];
                 var z=0.5;
-                me.cluster.vertices.push(new THREE.Vector3(v[0]*z, v[1]*z, v[2]*z));
+                this.cluster.vertices.push(new THREE.Vector3(v[0]*z, v[1]*z, v[2]*z));
             }
 
             for(var i=0; i<result.faces.length; ++i) {
                 var f = result.faces[i];
                 if(f.length === 3) {
-                    me.cluster.faces.push(new THREE.Face3(f[0], f[1], f[2]));
+                    this.cluster.faces.push(new THREE.Face3(f[0], f[1], f[2]));
                 } else if(f.length === 4) {
-                    me.cluster.faces.push(new THREE.Face4(f[0], f[1], f[2], f[3]));
+                    this.cluster.faces.push(new THREE.Face4(f[0], f[1], f[2], f[3]));
                 } else {
                     //Polygon needs to be subdivided
                 }
@@ -181,11 +212,11 @@ function TranslucentCluster() {
                 return this;
             };
     
-            for (var i=0; i<me.cluster.faces.length; ++i) {
-                var f = me.cluster.faces[i];
-                var vA = me.cluster.vertices[f.a];
-                var vB = me.cluster.vertices[f.b];
-                var vC = me.cluster.vertices[f.c];
+            for (var i=0; i<this.cluster.faces.length; ++i) {
+                var f = this.cluster.faces[i];
+                var vA = this.cluster.vertices[f.a];
+                var vB = this.cluster.vertices[f.b];
+                var vC = this.cluster.vertices[f.c];
                 cb.subVectors(vC, vB);
                 ab.subVectors(vA, vB);
                 cb.crossSelf(ab);
@@ -193,12 +224,12 @@ function TranslucentCluster() {
                 f.normal.copy(cb)
             }
 
-            me.cluster.verticesNeedUpdate = true;
-            me.cluster.elementsNeedUpdate = true;
-            me.cluster.normalsNeedUpdate = true;
+            this.cluster.verticesNeedUpdate = true;
+            this.cluster.elementsNeedUpdate = true;
+            this.cluster.normalsNeedUpdate = true;
 
-            me.cluster.computeBoundingBox();
-            me.cluster.computeBoundingSphere();
+            this.cluster.computeBoundingBox();
+            this.cluster.computeBoundingSphere();
 
             // toon shader
             var material = new THREE.ShaderMaterial({
@@ -233,23 +264,13 @@ function TranslucentCluster() {
                                     '}',
                                 ].join('\n')
             });
-            me.surfacemesh=new THREE.Mesh( me.cluster, material );
-            me.tr.scene.add( me.surfacemesh );
+            this.surfacemesh=new THREE.Mesh( this.cluster, material );
+            this.tr.scene.add( this.surfacemesh );
 
             // hack
-            me.surfacemesh.position.x = -field.dims[0]/4.0;
-            me.surfacemesh.position.y = -field.dims[1]/4.0;
-            me.surfacemesh.position.z = -field.dims[2]/4.0;
-        },
-        // init the scene
-        init: async function init(pars) {
-            var {elemId} = pars;
-            me.tr = new Translucent();
-            await me.tr.init(pars);
-            me.configureCubeEdges();
-//            await me.createTestData('http://localhost/translucent-viewer/demo-data/1.average-phir.nii.gz');
-        }
-    };
-    return me;
+            this.surfacemesh.position.x = -field.dims[0]/4.0;
+            this.surfacemesh.position.y = -field.dims[1]/4.0;
+            this.surfacemesh.position.z = -field.dims[2]/4.0;
+        };
 }
-module.exports = TranslucentCluster;
+
